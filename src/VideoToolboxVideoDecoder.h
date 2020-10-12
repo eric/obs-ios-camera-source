@@ -41,9 +41,9 @@ public:
     void Drain() override;
     void Shutdown() override;
     
-    void OutputFrame(CVPixelBufferRef pixelBufferRef);
+    void OutputFrame(CVPixelBufferRef pixelBufferRef, CMTime presentationTimeStamp);
         
-    bool update_frame(obs_source_t *capture, obs_source_frame *frame, CVImageBufferRef imageBufferRef, CMVideoFormatDescriptionRef formatDesc);
+    bool update_frame(obs_source_t *capture, obs_source_frame *frame, CVImageBufferRef imageBufferRef, CMVideoFormatDescriptionRef formatDesc, CMTime presentationTimeStamp);
     
     // The OBS Source to update.
     obs_source_t *source;

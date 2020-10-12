@@ -99,7 +99,7 @@ void FFMpegVideoDecoder::processPacketItem(PacketItem *packetItem)
 
         if (got_output && source != NULL)
         {
-            video_frame.timestamp = cur_time;
+            video_frame.timestamp = ts;
             obs_source_output_video(source, &video_frame);
         }
     }

@@ -20,6 +20,11 @@
 
 #define NAL_LENGTH_PREFIX_SIZE 4
 
+#define MILLI_TIMESCALE 1000
+#define MICRO_TIMESCALE (MILLI_TIMESCALE * 1000)
+#define NANO_TIMESCALE (MICRO_TIMESCALE * 1000)
+
+
 VideoToolboxDecoder::VideoToolboxDecoder()
 {
     waitingForSps = true;
@@ -272,7 +277,7 @@ void VideoToolboxDecoder::Input(std::vector<char> packet, int type, int tag)
     this->mQueue.add(item);
 }
 
-void VideoToolboxDecoder::OutputFrame(CVPixelBufferRef pixelBufferRef)
+void VideoToolboxDecoder::OutputFrame(CVPixelBufferRef pixelBufferRef, CMTime presentationTimeStamp)
 {
     CVImageBufferRef     image = pixelBufferRef;
     //        obs_source_frame *frame = frame;
@@ -283,7 +288,7 @@ void VideoToolboxDecoder::OutputFrame(CVPixelBufferRef pixelBufferRef)
     // kCMTimeRoundingMethod_Default);
     // frame->timestamp = target_pts_nano.value;
 
-    if (!update_frame(source, &frame, image, mFormat)) {
+    if (!update_frame(source, &frame, image, mFormat, presentationTimeStamp)) {
         // Send blank video
         obs_source_output_video(source, nullptr);
         return;
@@ -312,7 +317,7 @@ DecompressionSessionDecodeFrameCallback(void *decompressionOutputRefCon,
         blog(LOG_INFO, "VideoToolbox dropped frame");
     }
 
-    decoder->OutputFrame(imageBuffer);
+    decoder->OutputFrame(imageBuffer, presentationTimeStamp);
 }
 
 void VideoToolboxDecoder::createDecompressionSession()
@@ -350,7 +355,7 @@ void VideoToolboxDecoder::createDecompressionSession()
     }
 }
 
-bool VideoToolboxDecoder::update_frame(obs_source_t *capture, obs_source_frame *frame, CVImageBufferRef imageBufferRef, CMVideoFormatDescriptionRef formatDesc)
+bool VideoToolboxDecoder::update_frame(obs_source_t *capture, obs_source_frame *frame, CVImageBufferRef imageBufferRef, CMVideoFormatDescriptionRef formatDesc, CMTime presentationTimeStamp)
 {
     // blog(LOG_INFO, "Update frame");
     if (!formatDesc) {
@@ -363,7 +368,10 @@ bool VideoToolboxDecoder::update_frame(obs_source_t *capture, obs_source_frame *
     // video_format    format = format_from_subtype(fourcc);
     CMVideoDimensions dims = CMVideoFormatDescriptionGetDimensions(formatDesc);
 
-    frame->timestamp = os_gettime_ns();
+	CMTime presentationTimeStampNano = CMTimeConvertScale(
+		presentationTimeStamp, NANO_TIMESCALE, kCMTimeRoundingMethod_Default);
+	frame->timestamp = presentationTimeStampNano.value;
+
     frame->width    = dims.width;
     frame->height   = dims.height;
     frame->format   = VIDEO_FORMAT_BGRA;
